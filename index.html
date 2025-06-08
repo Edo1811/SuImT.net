@@ -5,7 +5,10 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShutupImTalking.net</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <!-- UMD build so window.supabase exists with a createClient fn -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  
   <style>
     :root {
       --color-primary: #FF6600;
@@ -44,6 +47,134 @@
     #profile-view button:hover { background-color: #e65500; }
     #profile-view #profileName { font-size: 1.5rem; margin-top: 0.5rem; }
   </style>
+
+  <script>
+    // Destructure factory from the UMD global
+    const { createClient } = supabase;
+    // Instantiate your Supabase client
+    const supabaseClient = createClient(
+      'https://ifpxyzjwyinmiphdqcvd.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eGFJRxPaJqwFVFbodg46-IiZUuGt_clBJYHzeeI1zCg'
+    );
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const homeView       = document.getElementById('home-view');
+      const profileView    = document.getElementById('profile-view');
+      const feed           = document.getElementById('feed');
+      const postBtn        = document.getElementById('postButton');
+      const postText       = document.getElementById('postText');
+      const postImageInput = document.getElementById('postImageInput');
+      const saveProfileBtn = document.getElementById('saveProfile');
+      const nameInput      = document.getElementById('nameInput');
+      const descInput      = document.getElementById('descInput');
+      const profilePicIn   = document.getElementById('profilePicInput');
+      const profilePicPre  = document.getElementById('profilePicPreview');
+
+      // NAVIGATION
+      document.getElementById('navHome').addEventListener('click', () => {
+        homeView.classList.remove('hidden');
+        profileView.classList.add('hidden');
+      });
+      document.getElementById('navProfile').addEventListener('click', () => {
+        loadProfile();
+        homeView.classList.add('hidden');
+        profileView.classList.remove('hidden');
+      });
+
+      // PROFILE
+      function loadProfile() {
+        const profile = JSON.parse(localStorage.getItem('profile') || '{}');
+        nameInput.value        = profile.name || 'You';
+        descInput.value        = profile.desc || '';
+        profilePicPre.src      = profile.pic  || '';
+        document.getElementById('profileName').textContent = profile.name || 'You';
+        document.getElementById('profileDesc').textContent = profile.desc || '';
+      }
+      profilePicIn.addEventListener('change', () => {
+        const file = profilePicIn.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => profilePicPre.src = reader.result;
+        reader.readAsDataURL(file);
+      });
+      saveProfileBtn.addEventListener('click', () => {
+        const profile = {
+          name: nameInput.value.trim() || 'You',
+          desc: descInput.value.trim(),
+          pic:  profilePicPre.src
+        };
+        localStorage.setItem('profile', JSON.stringify(profile));
+        loadProfile();
+        alert('Profile saved!');
+      });
+
+      // POSTS
+      async function displayPosts() {
+        const { data, error } = await supabaseClient
+          .from('posts')
+          .select('*')
+          .order('time', { ascending: false });
+        if (error) return console.error('Error loading posts:', error);
+        feed.innerHTML = '';
+        data.forEach(addPostToFeed);
+      }
+      postBtn.addEventListener('click', async () => {
+        const text    = postText.value.trim();
+        const file    = postImageInput.files[0];
+        const profile = JSON.parse(localStorage.getItem('profile') || '{}');
+        const author  = profile.name || 'You';
+        const pic     = profile.pic  || '';
+        const time    = new Date().toISOString();
+        if (!text && !file) return;
+
+        const insert = async imgData => {
+          const { error } = await supabaseClient
+            .from('posts')
+            .insert([{ text, time, author, pic, image: imgData }]);
+          if (error) console.error('Post error:', error);
+          else {
+            postText.value    = '';
+            postImageInput.value = '';
+            displayPosts();
+          }
+        };
+
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => insert(reader.result);
+          reader.readAsDataURL(file);
+        } else {
+          insert('');
+        }
+      });
+
+      function addPostToFeed({ text, time, author, pic, image }) {
+        const article = document.createElement('article');
+        article.className = 'post';
+        article.innerHTML = `
+          <img class="avatar" src="${pic}" alt="avatar" />
+          <div class="post-content">
+            <h2 class="author">
+              <a href="#" class="author-link">${author}</a>
+            </h2>
+            <p class="content">${text}</p>
+            ${image ? `<img class="post-image" src="${image}" alt="Post image"/>` : ''}
+            <span class="timestamp">${new Date(time).toLocaleString()}</span>
+          </div>
+        `;
+        article.querySelector('.author-link').addEventListener('click', e => {
+          e.preventDefault();
+          document.getElementById('navProfile').click();
+        });
+        feed.appendChild(article);
+      }
+
+      // kick it off
+      displayPosts();
+      homeView.classList.remove('hidden');
+      profileView.classList.add('hidden');
+    });
+  </script>
 </head>
 <body>
   <header>
@@ -78,134 +209,5 @@
       <p id="profileDesc"></p>
     </section>
   </main>
-  <script>
-    const supabaseUrl = 'https://ifpxyzjwyinmiphdqcvd.supabase.co'; // <- replace with your actual Supabase URL
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmcHh5emp3eWlubWlwaGRxY3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzODQyMjUsImV4cCI6MjA2NDk2MDIyNX0.eGFJRxPaJqwFVFbodg46-IiZUuGt_clBJYHzeeI1zCg';
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const homeView = document.getElementById('home-view');
-      const profileView = document.getElementById('profile-view');
-
-      document.getElementById('navHome').addEventListener('click', () => {
-        homeView.classList.remove('hidden');
-        profileView.classList.add('hidden');
-      });
-
-      document.getElementById('navProfile').addEventListener('click', () => {
-        loadProfile();
-        homeView.classList.add('hidden');
-        profileView.classList.remove('hidden');
-      });
-
-      const profilePicInput = document.getElementById('profilePicInput');
-      const profilePicPreview = document.getElementById('profilePicPreview');
-      const nameInput = document.getElementById('nameInput');
-      const descInput = document.getElementById('descInput');
-      const saveProfileBtn = document.getElementById('saveProfile');
-
-      function loadProfile() {
-        const profile = JSON.parse(localStorage.getItem('profile') || '{}');
-        nameInput.value = profile.name || 'You';
-        descInput.value = profile.desc || '';
-        profilePicPreview.src = profile.pic || '';
-        document.getElementById('profileName').textContent = profile.name || 'You';
-        document.getElementById('profileDesc').textContent = profile.desc || '';
-      }
-
-      profilePicInput.addEventListener('change', () => {
-        const file = profilePicInput.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => profilePicPreview.src = reader.result;
-        reader.readAsDataURL(file);
-      });
-
-      saveProfileBtn.addEventListener('click', () => {
-        const profile = {
-          name: nameInput.value.trim() || 'You',
-          desc: descInput.value.trim(),
-          pic: profilePicPreview.src
-        };
-        localStorage.setItem('profile', JSON.stringify(profile));
-        loadProfile();
-        alert('Profile saved!');
-      });
-
-      const feed = document.getElementById('feed');
-      const postBtn = document.getElementById('postButton');
-      const postText = document.getElementById('postText');
-      const postImageInput = document.getElementById('postImageInput');
-
-      async function displayPosts() {
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .order('time', { ascending: false });
-
-        if (error) {
-          console.error('Error loading posts:', error);
-          return;
-        }
-
-        feed.innerHTML = '';
-        data.forEach(p => addPostToFeed(p));
-      }
-
-      postBtn.addEventListener('click', async () => {
-        const text = postText.value.trim();
-        const profile = JSON.parse(localStorage.getItem('profile') || '{}');
-        const author = profile.name || 'You';
-        const pic = profile.pic || '';
-        const time = new Date().toISOString();
-        const file = postImageInput.files[0];
-        if (!text && !file) return;
-
-        const insertPost = async (imageData = '') => {
-          const { error } = await supabase.from('posts').insert([
-            { text, time, author, pic, image: imageData }
-          ]);
-          if (error) {
-            console.error('Post error:', error);
-          } else {
-            postText.value = '';
-            postImageInput.value = '';
-            displayPosts();
-          }
-        };
-
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = () => insertPost(reader.result);
-          reader.readAsDataURL(file);
-        } else {
-          insertPost();
-        }
-      });
-
-      function addPostToFeed({ text, time, author, pic, image }) {
-        const article = document.createElement('article');
-        article.className = 'post';
-        article.innerHTML = `
-          <img class="avatar" src="${pic}" alt="avatar" />
-          <div class="post-content">
-            <h2 class="author"><a href="#" class="author-link">${author}</a></h2>
-            <p class="content">${text}</p>
-            ${image ? `<img class="post-image" src="${image}" alt="Post image"/>` : ''}
-            <span class="timestamp">${new Date(time).toLocaleString()}</span>
-          </div>
-        `;
-        article.querySelector('.author-link').addEventListener('click', e => {
-          e.preventDefault();
-          document.getElementById('navProfile').click();
-        });
-        feed.appendChild(article);
-      }
-
-      displayPosts();
-      homeView.classList.remove('hidden');
-      profileView.classList.add('hidden');
-    });
-  </script>
 </body>
 </html>
