@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShutupImTalking.net</title>
 
-  <!-- UMD build so window.supabase exists with a createClient fn -->
+  <!-- Supabase UMD script -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  
+
   <style>
     :root {
       --color-primary: #FF6600;
@@ -48,16 +48,50 @@
     #profile-view #profileName { font-size: 1.5rem; margin-top: 0.5rem; }
   </style>
 
-  <script>
-    // Destructure factory from the UMD global
-    const { createClient } = supabase;
-    // Instantiate your Supabase client
-    const supabaseClient = createClient(
-      'https://ifpxyzjwyinmiphdqcvd.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmcHh5emp3eWlubWlwaGRxY3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzODQyMjUsImV4cCI6MjA2NDk2MDIyNX0.eGFJRxPaJqwFVFbodg46-IiZUuGt_clBJYHzeeI1zCg'
-    );
+</head>
+<body>
+  <header>
+    <div class="logo">SuImT.net</div>
+    <nav>
+      <ul>
+        <li><a id="navHome">Home</a></li>
+        <li><a id="navProfile">Profile</a></li>
+        <li><a id="navSettings">Settings</a></li>
+        <li><a id="navRules">Rules</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main>
+    <section id="home-view">
+      <div class="post-input">
+        <textarea id="postText" placeholder="What's happening?" rows="3"></textarea>
+        <input type="file" id="postImageInput" accept="image/*" />
+        <button id="postButton">Post</button>
+      </div>
+      <div class="feed" id="feed"></div>
+    </section>
 
+    <section id="profile-view" class="hidden">
+      <img id="profilePicPreview" src="" alt="Profile Picture" />
+      <input type="file" id="profilePicInput" accept="image/*" />
+      <input type="text" id="nameInput" placeholder="Your name" />
+      <textarea id="descInput" placeholder="Short description" rows="3"></textarea>
+      <button id="saveProfile">Save Profile</button>
+      <hr />
+      <h2 id="profileName"></h2>
+      <p id="profileDesc"></p>
+    </section>
+  </main>
+
+  <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // ✅ move client init inside DOMContentLoaded
+      const { createClient } = supabase;
+      const supabaseClient = createClient(
+        'https://ifpxyzjwyinmiphdqcvd.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmcHh5emp3eWlubWlwaGRxY3ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzODQyMjUsImV4cCI6MjA2NDk2MDIyNX0.eGFJRxPaJqwFVFbodg46-IiZUuGt_clBJYHzeeI1zCg'
+      );
+
       const homeView       = document.getElementById('home-view');
       const profileView    = document.getElementById('profile-view');
       const feed           = document.getElementById('feed');
@@ -90,6 +124,7 @@
         document.getElementById('profileName').textContent = profile.name || 'You';
         document.getElementById('profileDesc').textContent = profile.desc || '';
       }
+
       profilePicIn.addEventListener('change', () => {
         const file = profilePicIn.files[0];
         if (!file) return;
@@ -97,6 +132,7 @@
         reader.onload = () => profilePicPre.src = reader.result;
         reader.readAsDataURL(file);
       });
+
       saveProfileBtn.addEventListener('click', () => {
         const profile = {
           name: nameInput.value.trim() || 'You',
@@ -118,6 +154,7 @@
         feed.innerHTML = '';
         data.forEach(addPostToFeed);
       }
+
       postBtn.addEventListener('click', async () => {
         const text    = postText.value.trim();
         const file    = postImageInput.files[0];
@@ -169,45 +206,11 @@
         feed.appendChild(article);
       }
 
-      // kick it off
+      // Initial boot
       displayPosts();
       homeView.classList.remove('hidden');
       profileView.classList.add('hidden');
     });
   </script>
-</head>
-<body>
-  <header>
-    <div class="logo">SuImT.net</div>
-    <nav>
-      <ul>
-        <li><a id="navHome">Home</a></li>
-        <li><a id="navProfile">Profile</a></li>
-        <li><a id="navSettings">Settings</a></li>
-        <li><a id="navRules">Rules</a></li>
-      </ul>
-    </nav>
-  </header>
-  <main>
-    <section id="home-view">
-      <div class="post-input">
-        <textarea id="postText" placeholder="What's happening?" rows="3"></textarea>
-        <input type="file" id="postImageInput" accept="image/*" />
-        <button id="postButton">Post</button>
-      </div>
-      <div class="feed" id="feed"></div>
-    </section>
-
-    <section id="profile-view" class="hidden">
-      <img id="profilePicPreview" src="" alt="Profile Picture" />
-      <input type="file" id="profilePicInput" accept="image/*" />
-      <input type="text" id="nameInput" placeholder="Your name" />
-      <textarea id="descInput" placeholder="Short description" rows="3"></textarea>
-      <button id="saveProfile">Save Profile</button>
-      <hr />
-      <h2 id="profileName"></h2>
-      <p id="profileDesc"></p>
-    </section>
-  </main>
 </body>
 </html>
